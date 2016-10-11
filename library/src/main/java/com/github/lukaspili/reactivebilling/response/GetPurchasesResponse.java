@@ -29,17 +29,23 @@ public class GetPurchasesResponse extends Response {
     public static class PurchaseResponse {
 
         private final String productId;
+        private final String purchaseData;
         private final String signature;
         private final Purchase purchase;
 
-        public PurchaseResponse(String productId, String signature, Purchase purchase) {
+        public PurchaseResponse(String productId, String purchaseData, String signature, Purchase purchase) {
             this.productId = productId;
+            this.purchaseData = purchaseData;
             this.signature = signature;
             this.purchase = purchase;
         }
 
         public String getProductId() {
             return productId;
+        }
+
+        public String getPurchaseData() {
+            return purchaseData;
         }
 
         public String getSignature() {

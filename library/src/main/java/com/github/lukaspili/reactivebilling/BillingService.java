@@ -70,6 +70,7 @@ public class BillingService {
         for (int i = 0; i < productsIds.size(); i++) {
             purchaseResponses.add(new GetPurchasesResponse.PurchaseResponse(
                     productsIds.get(i),
+                    purchases.get(i),
                     signatures.get(i),
                     PurchaseParser.parse(purchases.get(i))
             ));
