@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
 
 android {
     compileSdkVersion 23
@@ -16,6 +17,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {
@@ -25,4 +33,20 @@ dependencies {
     implementation 'com.android.billingclient:billing:6.0.0'
 }
 
-apply from: 'https://raw.github.com/chrisbanes/gradle-mvn-push/master/gradle-mvn-push.gradle'
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.github.lukaspili'
+                artifactId = 'reactive-billing'
+                version = '0.3-SNAPSHOT'
+
+                pom {
+                    name = 'reactive-billing'
+                    description = 'Reactive Billing for Android'
+                }
+            }
+        }
+    }
+}
