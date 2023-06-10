@@ -28,8 +28,10 @@ public class GetPurchasesObservable extends BaseObservable<GetPurchasesResponse>
     @Override
     protected void onBillingServiceReady(BillingService billingService, Observer<? super GetPurchasesResponse> observer) {
         try {
-            observer.onNext(billingService.getPurchases(purchaseType, continuationToken));
-            observer.onCompleted();
+            billingService.getPurchases(purchaseType, continuationToken, (getPurchasesResponse) -> {
+                observer.onNext(getPurchasesResponse);
+                observer.onCompleted();
+            });
         } catch (RemoteException e) {
             observer.onError(e);
         }

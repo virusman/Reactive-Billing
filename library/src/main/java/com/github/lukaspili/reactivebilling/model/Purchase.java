@@ -56,4 +56,18 @@ public class Purchase {
     public boolean isAutoRenewing() {
         return autoRenewing;
     }
+
+    public static Purchase fromBillingPurchase(com.android.billingclient.api.Purchase purchase) {
+            return new Purchase(
+                purchase.getOrderId(),
+                purchase.getPackageName(),
+                purchase.getProducts().get(0),
+                purchase.getDeveloperPayload(),
+                purchase.getPurchaseToken(),
+                PurchaseState.fromBillingPurchaseState(purchase.getPurchaseState()),
+                purchase.getPurchaseTime(),
+                purchase.isAutoRenewing()
+
+        );
+    }
 }

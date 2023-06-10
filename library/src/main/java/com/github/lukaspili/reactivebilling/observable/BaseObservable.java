@@ -1,16 +1,22 @@
 package com.github.lukaspili.reactivebilling.observable;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.IBinder;
 import android.os.Looper;
 
-import com.android.vending.billing.IInAppBillingService;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.github.lukaspili.reactivebilling.BillingService;
+import com.github.lukaspili.reactivebilling.ReactiveBilling;
 import com.github.lukaspili.reactivebilling.ReactiveBillingLogger;
 
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import rx.Observable;
@@ -40,19 +46,11 @@ public abstract class BaseObservable<T> implements Observable.OnSubscribe<T> {
         final boolean useSemaphore = Looper.myLooper() != Looper.getMainLooper();
         final Connection connection = new Connection(subscriber, useSemaphore);
 
-        ReactiveBillingLogger.log("Bind service (thread %s)", Thread.currentThread().getName());
-        try {
-            context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        } catch (SecurityException e) {
-            ReactiveBillingLogger.log(e, "Bind service error");
-            subscriber.onError(e);
-        }
-
         subscriber.add(Subscriptions.create(new Action0() {
             @Override
             public void call() {
                 ReactiveBillingLogger.log("Unbind service (thread %s)", Thread.currentThread().getName());
-                context.unbindService(connection);
+                connection.endConnection();
             }
         }));
 
@@ -77,26 +75,23 @@ public abstract class BaseObservable<T> implements Observable.OnSubscribe<T> {
 
     protected abstract void onBillingServiceReady(BillingService billingService, Observer<? super T> observer);
 
-    private class Connection implements ServiceConnection {
+    private class Connection implements BillingClientStateListener, PurchasesUpdatedListener {
 
         private final Observer observer;
         private final boolean useSemaphore;
+        private final BillingClient billingClient;
 
         public Connection(Observer observer, boolean useSemaphore) {
             this.observer = observer;
             this.useSemaphore = useSemaphore;
+            this.billingClient = BillingClient.newBuilder(context).setListener(this).enablePendingPurchases().build();
+            billingClient.startConnection(this);
         }
 
-        /**
-         * For some reason, that method is always called on the main thread
-         * Regardless of the originating thread executing bindService()
-         */
         @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
+        public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
             ReactiveBillingLogger.log("Service connected (thread %s)", Thread.currentThread().getName());
-
-            IInAppBillingService inAppBillingService = IInAppBillingService.Stub.asInterface(service);
-            billingService = new BillingService(context, inAppBillingService);
+            billingService = new BillingService(context, billingClient);
 
             if (useSemaphore) {
                 // once the service is available, release the semaphore
@@ -109,9 +104,18 @@ public abstract class BaseObservable<T> implements Observable.OnSubscribe<T> {
         }
 
         @Override
-        public void onServiceDisconnected(ComponentName name) {
+        public void onBillingServiceDisconnected() {
             ReactiveBillingLogger.log("Service disconnected (thread %s)", Thread.currentThread().getName());
             billingService = null;
+        }
+
+        @Override
+        public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> list) {
+            ReactiveBilling.getInstance(context).getPurchaseFlowService().onPurchasesUpdated(billingResult, list);
+        }
+
+        public void endConnection() {
+            billingClient.endConnection();
         }
     }
 }

@@ -14,13 +14,14 @@
 
 package com.github.lukaspili.reactivebilling;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
 import com.github.lukaspili.reactivebilling.observable.BillingServiceObservable;
 import com.github.lukaspili.reactivebilling.observable.ConsumePurchaseObservable;
-import com.github.lukaspili.reactivebilling.observable.GetBuyIntentObservable;
+import com.github.lukaspili.reactivebilling.observable.LaunchPurchaseFlowObservable;
 import com.github.lukaspili.reactivebilling.observable.GetPurchasesObservable;
 import com.github.lukaspili.reactivebilling.observable.GetSkuDetailsObservable;
 import com.github.lukaspili.reactivebilling.observable.IsBillingSupportedObservable;
@@ -89,15 +90,15 @@ public class ReactiveBilling {
         return GetPurchasesObservable.create(context, purchaseType, continuationToken);
     }
 
-    public Observable<Response> startPurchase(String productId, PurchaseType purchaseType, String developerPayload, Bundle extras) {
-        return GetBuyIntentObservable.create(context, purchaseFlowService, productId, purchaseType, developerPayload, extras);
+    public Observable<Response> startPurchase(Activity activity, String productId, PurchaseType purchaseType, String developerPayload, Bundle extras) {
+        return LaunchPurchaseFlowObservable.create(activity, purchaseFlowService, productId, purchaseType, developerPayload, extras);
     }
 
     public Observable<PurchaseResponse> purchaseFlow() {
         return purchaseFlowService.getObservable();
     }
 
-    PurchaseFlowService getPurchaseFlowService() {
+    public PurchaseFlowService getPurchaseFlowService() {
         return purchaseFlowService;
     }
 }

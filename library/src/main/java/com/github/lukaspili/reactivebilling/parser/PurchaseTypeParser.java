@@ -1,5 +1,6 @@
 package com.github.lukaspili.reactivebilling.parser;
 
+import com.android.billingclient.api.BillingClient;
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
 
 /**

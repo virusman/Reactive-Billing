@@ -1,9 +1,14 @@
 package com.github.lukaspili.reactivebilling.model;
 
+import com.android.billingclient.api.ProductDetails;
+import com.github.lukaspili.reactivebilling.parser.PurchaseTypeParser;
+
 /**
  * Created by lukasz on 06/05/16.
  */
 public class SkuDetails {
+
+    private final ProductDetails productDetails;
 
     private final String productId;
 
@@ -19,7 +24,8 @@ public class SkuDetails {
 
     private final String description;
 
-    public SkuDetails(String productId, long priceAmountMicros, PurchaseType purchaseType, String price, String priceCurrencyCode, String title, String description) {
+    public SkuDetails(ProductDetails productDetails, String productId, long priceAmountMicros, PurchaseType purchaseType, String price, String priceCurrencyCode, String title, String description) {
+        this.productDetails = productDetails;
         this.productId = productId;
         this.priceAmountMicros = priceAmountMicros;
         this.purchaseType = purchaseType;
@@ -55,5 +61,19 @@ public class SkuDetails {
 
     public String getDescription() {
         return description;
+    }
+
+
+    public static SkuDetails fromProductDetails(ProductDetails productDetails) {
+        return new SkuDetails(
+                productDetails,
+                productDetails.getProductId(),
+                productDetails.getOneTimePurchaseOfferDetails().getPriceAmountMicros(),
+                PurchaseTypeParser.parse(productDetails.getProductType()),
+                productDetails.getOneTimePurchaseOfferDetails().getFormattedPrice(),
+                productDetails.getOneTimePurchaseOfferDetails().getPriceCurrencyCode(),
+                productDetails.getTitle(),
+                productDetails.getDescription()
+        );
     }
 }

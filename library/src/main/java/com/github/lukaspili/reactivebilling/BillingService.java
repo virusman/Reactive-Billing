@@ -1,23 +1,29 @@
 package com.github.lukaspili.reactivebilling;
 
-import android.app.PendingIntent;
+import android.app.Activity;
 import android.content.Context;
-import android.os.Bundle;
 import android.os.RemoteException;
 import android.text.TextUtils;
 
-import com.android.vending.billing.IInAppBillingService;
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.ConsumeResponseListener;
+import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryPurchasesParams;
+import com.github.lukaspili.reactivebilling.listener.GetPurchasesResponseListener;
+import com.github.lukaspili.reactivebilling.listener.GetSkuDetailsResponseListener;
+import com.github.lukaspili.reactivebilling.listener.LaunchPurchaseFlowListener;
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
 import com.github.lukaspili.reactivebilling.model.SkuDetails;
 import com.github.lukaspili.reactivebilling.parser.PurchaseParser;
-import com.github.lukaspili.reactivebilling.parser.SkuDetailsParser;
-import com.github.lukaspili.reactivebilling.response.GetBuyIntentResponse;
 import com.github.lukaspili.reactivebilling.response.GetPurchasesResponse;
 import com.github.lukaspili.reactivebilling.response.GetSkuDetailsResponse;
 import com.github.lukaspili.reactivebilling.response.Response;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,110 +34,126 @@ public class BillingService {
     private static final int API_VERSION = 3;
 
     private final Context context;
-    private final IInAppBillingService billingService;
+    private final BillingClient billingClient;
 
-    public BillingService(Context context, IInAppBillingService billingService) {
+    public BillingService(Context context, BillingClient billingClient) {
         this.context = context;
-        this.billingService = billingService;
+        this.billingClient = billingClient;
     }
 
     public Response isBillingSupported(PurchaseType purchaseType) throws RemoteException {
         ReactiveBillingLogger.log("Is billing supported - request (thread %s)", Thread.currentThread().getName());
-
-        int response = billingService.isBillingSupported(BillingService.API_VERSION, context.getPackageName(), purchaseType.getIdentifier());
+        String feature = null;
+        switch (purchaseType) {
+            case PRODUCT:
+                feature = BillingClient.FeatureType.PRODUCT_DETAILS;
+                break;
+            case SUBSCRIPTION:
+                feature = BillingClient.FeatureType.SUBSCRIPTIONS;
+                break;
+        }
+        BillingResult response = billingClient.isFeatureSupported(feature);
         ReactiveBillingLogger.log("Is billing supported - response: %d", response);
-        return new Response(response);
+        return new Response(response.getResponseCode());
     }
 
-    public Response consumePurchase(String purchaseToken) throws RemoteException {
+    public void consumePurchase(String purchaseToken, ConsumeResponseListener listener) throws RemoteException {
         ReactiveBillingLogger.log("Consume purchase - request (thread %s)", Thread.currentThread().getName());
-
-        int response = billingService.consumePurchase(BillingService.API_VERSION, context.getPackageName(), purchaseToken);
-        ReactiveBillingLogger.log("Consume purchase - response: %d", response);
-        return new Response(response);
+        billingClient.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build(), (billingResult, s) -> {
+            ReactiveBillingLogger.log("Consume purchase - response: %d", billingResult.getResponseCode());
+            listener.onConsumeResponse(billingResult, s);
+        });
     }
 
-    public GetPurchasesResponse getPurchases(PurchaseType purchaseType, String continuationToken) throws RemoteException {
+    public void getPurchases(PurchaseType purchaseType, String continuationToken, GetPurchasesResponseListener listener) throws RemoteException {
         ReactiveBillingLogger.log("Get purchases - request (thread %s)", Thread.currentThread().getName());
-        Bundle bundle = billingService.getPurchases(BillingService.API_VERSION, context.getPackageName(), purchaseType.getIdentifier(), continuationToken);
+        billingClient.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(purchaseType.getIdentifier()).build(), (billingResult, purchasesList) -> {
+            ReactiveBillingLogger.log("Get purchases - response: %d", billingResult.getResponseCode());
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                listener.onGetPurchasesResponse(new GetPurchasesResponse(billingResult.getResponseCode(), null, null));
+                return;
+            }
+            List<String> productsIds = new ArrayList<>();
+            List<String> purchases = new ArrayList<>();
+            List<String> signatures = new ArrayList<>();
+            for (int i = 0; i < purchasesList.size(); i++) {
+                productsIds.add(purchasesList.get(i).getProducts().get(0));
+                purchases.add(purchasesList.get(i).getOriginalJson());
+                signatures.add(purchasesList.get(i).getSignature());
+            }
+            List<GetPurchasesResponse.PurchaseResponse> purchaseResponses = new ArrayList<>();
+            for (int i = 0; i < productsIds.size(); i++) {
+                purchaseResponses.add(new GetPurchasesResponse.PurchaseResponse(
+                        productsIds.get(i),
+                        purchases.get(i),
+                        signatures.get(i),
+                        PurchaseParser.parse(purchases.get(i))
+                ));
+            }
 
-        int response = bundle.getInt("RESPONSE_CODE", -1);
-        ReactiveBillingLogger.log("Get purchases - response code: %s", response);
-
-        if (response != 0) {
-            return new GetPurchasesResponse(response, null, null);
-        }
-
-        List<String> productsIds = bundle.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-        List<String> purchases = bundle.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-        List<String> signatures = bundle.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
-
-        List<GetPurchasesResponse.PurchaseResponse> purchaseResponses = new ArrayList<>();
-        for (int i = 0; i < productsIds.size(); i++) {
-            purchaseResponses.add(new GetPurchasesResponse.PurchaseResponse(
-                    productsIds.get(i),
-                    purchases.get(i),
-                    signatures.get(i),
-                    PurchaseParser.parse(purchases.get(i))
-            ));
-        }
-
-        ReactiveBillingLogger.log("Get purchases - items size: %s", purchaseResponses.size());
-        return new GetPurchasesResponse(response, purchaseResponses, bundle.getString("INAPP_CONTINUATION_TOKEN"));
+            ReactiveBillingLogger.log("Get purchases - items size: %s", purchaseResponses.size());
+            listener.onGetPurchasesResponse(new GetPurchasesResponse(billingResult.getResponseCode(), purchaseResponses, null));
+        });
     }
 
-    public GetSkuDetailsResponse getSkuDetails(PurchaseType purchaseType, String... productIds) throws RemoteException {
+    public void getSkuDetails(PurchaseType purchaseType, GetSkuDetailsResponseListener listener, String... productIds) throws RemoteException {
         if (productIds == null || productIds.length == 0) {
             throw new IllegalArgumentException("Product ids cannot be blank");
         }
 
         ReactiveBillingLogger.log("Get sku details - request: %s (thread %s)", TextUtils.join(", ", productIds), Thread.currentThread().getName());
 
-        Bundle bundle = new Bundle();
-        bundle.putStringArrayList("ITEM_ID_LIST", new ArrayList(Arrays.asList(productIds)));
-
-        bundle = billingService.getSkuDetails(BillingService.API_VERSION, context.getPackageName(), purchaseType.getIdentifier(), bundle);
-
-        int response = bundle.getInt("RESPONSE_CODE", -1);
-        ReactiveBillingLogger.log("Get sku details - response code: %s", response);
-
-        if (response != 0) {
-            return new GetSkuDetailsResponse(response, null);
+        ArrayList<QueryProductDetailsParams.Product> products = new ArrayList<>();
+        for (String productId : productIds) {
+            products.add(QueryProductDetailsParams.Product.newBuilder().setProductId(productId).setProductType(purchaseType.getIdentifier()).build());
         }
 
-        List<String> detailsJson = bundle.getStringArrayList("DETAILS_LIST");
-        List<SkuDetails> skuDetailsList = new ArrayList<>();
-
-        if (detailsJson == null || detailsJson.isEmpty()) {
-            ReactiveBillingLogger.log("Get sku details - empty list");
-            return new GetSkuDetailsResponse(response, skuDetailsList);
-        }
-
-        SkuDetails skuDetails;
-        for (int i = 0; i < detailsJson.size(); i++) {
-            skuDetails = SkuDetailsParser.parse(detailsJson.get(i));
-            if (skuDetails != null) {
-                skuDetailsList.add(skuDetails);
+        billingClient.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(products).build(), (billingResult, productDetails) -> {
+            ReactiveBillingLogger.log("Get sku details - response code: %s", billingResult.getResponseCode());
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                listener.onGetSkuDetailsResponse(new GetSkuDetailsResponse(billingResult.getResponseCode(), null));
+                return;
             }
-        }
 
-        ReactiveBillingLogger.log("Get sku details - list size: %s", skuDetailsList.size());
-        return new GetSkuDetailsResponse(response, skuDetailsList);
+            List<SkuDetails> skuDetailsList = new ArrayList<>();
+            for (int i = 0; i < productDetails.size(); i++) {
+                skuDetailsList.add(SkuDetails.fromProductDetails(productDetails.get(i)));
+            }
+
+            ReactiveBillingLogger.log("Get sku details - list size: %s", skuDetailsList.size());
+            listener.onGetSkuDetailsResponse(new GetSkuDetailsResponse(billingResult.getResponseCode(), skuDetailsList));
+        });
     }
 
-    public GetBuyIntentResponse getBuyIntent(String productId, PurchaseType purchaseType, String developerPayload) throws RemoteException {
-        ReactiveBillingLogger.log("Get buy intent - request: %s (thread %s)", productId, Thread.currentThread().getName());
+    public void launchPurchaseFlow(Activity activity, String productId, PurchaseType purchaseType, String developerPayload, LaunchPurchaseFlowListener listener) {
+        ReactiveBillingLogger.log("Launch purchase flow - request: %s (thread %s)", productId, Thread.currentThread().getName());
 
-        Bundle bundle = billingService.getBuyIntent(BillingService.API_VERSION, context.getPackageName(), productId, purchaseType.getIdentifier(), developerPayload);
+        List<QueryProductDetailsParams.Product> products = Collections.singletonList(QueryProductDetailsParams.Product.newBuilder().setProductId(productId).setProductType(purchaseType.getIdentifier()).build());
 
-        int response = bundle.getInt("RESPONSE_CODE", -1);
-        ReactiveBillingLogger.log("Get buy intent - response code: %s", response);
-
-        if (response != 0) {
-            return new GetBuyIntentResponse(response, null);
-        }
-
-        PendingIntent buyIntent = bundle.getParcelable("BUY_INTENT");
-        return new GetBuyIntentResponse(response, buyIntent);
+        billingClient.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(products).build(), (billingResult, productDetails) -> {
+            ReactiveBillingLogger.log("Launch purchase flow - query details - response code: %s", billingResult.getResponseCode());
+            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                ReactiveBillingLogger.log("Launch purchase flow - query details - error: %s", billingResult.getDebugMessage());
+                listener.onPurchaseFlowResult(new Response(billingResult.getResponseCode()));
+                return;
+            }
+            if (productDetails.size() == 0) {
+                ReactiveBillingLogger.log("Launch purchase flow - query details - error: no product details found");
+                listener.onPurchaseFlowResult(new Response(BillingClient.BillingResponseCode.ERROR));
+                return;
+            }
+            BillingFlowParams params = BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(
+                            Collections.singletonList(
+                                    BillingFlowParams.ProductDetailsParams.newBuilder()
+                                            .setProductDetails(productDetails.get(0))
+                                            .build()
+                            )
+                    )
+                    .setObfuscatedAccountId(developerPayload)
+                    .build();
+            BillingResult result = billingClient.launchBillingFlow(activity, params);
+            listener.onPurchaseFlowResult(new Response(result.getResponseCode()));
+        });
     }
 }

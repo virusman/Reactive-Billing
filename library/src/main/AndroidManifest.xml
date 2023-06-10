@@ -3,12 +3,4 @@
 
     <uses-permission android:name="com.android.vending.BILLING"/>
 
-    <application>
-        <activity
-            android:name=".ReactiveBillingShadowActivity"
-            android:launchMode="singleTop"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            />
-    </application>
-
 </manifest>

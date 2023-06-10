@@ -2,6 +2,7 @@ package com.github.lukaspili.reactivebilling.parser;
 
 import com.github.lukaspili.reactivebilling.ReactiveBillingLogger;
 import com.github.lukaspili.reactivebilling.model.Purchase;
+import com.github.lukaspili.reactivebilling.model.PurchaseState;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,7 +29,7 @@ public class PurchaseParser {
                 json.optString("productId"),
                 json.optString("developerPayload"),
                 json.optString("purchaseToken"),
-                PurchaseStateParser.parse(json.optInt("purchaseState")),
+                PurchaseState.fromBillingPurchaseState(json.optInt("purchaseState")),
                 json.optLong("purchaseTime"),
                 json.optBoolean("autoRenewing")
         );

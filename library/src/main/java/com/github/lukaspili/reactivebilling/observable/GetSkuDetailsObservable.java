@@ -28,8 +28,10 @@ public class GetSkuDetailsObservable extends BaseObservable<GetSkuDetailsRespons
     @Override
     protected void onBillingServiceReady(BillingService billingService, Observer<? super GetSkuDetailsResponse> observer) {
         try {
-            observer.onNext(billingService.getSkuDetails(purchaseType, productIds));
-            observer.onCompleted();
+            billingService.getSkuDetails(purchaseType, (getSkuDetailsResponse) -> {
+                observer.onNext(getSkuDetailsResponse);
+                observer.onCompleted();
+            }, productIds);
         } catch (RemoteException e) {
             observer.onError(e);
         }

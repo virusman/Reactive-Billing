@@ -1,5 +1,7 @@
 package com.github.lukaspili.reactivebilling.response;
 
+import com.android.billingclient.api.BillingClient;
+
 /**
  * Created by lukasz on 06/05/16.
  */
@@ -12,7 +14,7 @@ public class Response {
     }
 
     public boolean isSuccess() {
-        return responseCode == 0;
+        return responseCode == BillingClient.BillingResponseCode.OK;
     }
 
     public int getResponseCode() {

@@ -25,8 +25,11 @@ public class ConsumePurchaseObservable extends BaseObservable<Response> {
     @Override
     protected void onBillingServiceReady(BillingService billingService, Observer<? super Response> observer) {
         try {
-            observer.onNext(billingService.consumePurchase(purchaseToken));
-            observer.onCompleted();
+            billingService.consumePurchase(purchaseToken, (billingResult, s) -> {
+                Response response = new Response(billingResult.getResponseCode());
+                observer.onNext(response);
+                observer.onCompleted();
+            });
         } catch (RemoteException e) {
             observer.onError(e);
         }
