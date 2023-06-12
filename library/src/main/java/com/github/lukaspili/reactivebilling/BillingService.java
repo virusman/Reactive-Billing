@@ -5,6 +5,8 @@ import android.content.Context;
 import android.os.RemoteException;
 import android.text.TextUtils;
 
+import com.android.billingclient.api.AcknowledgePurchaseParams;
+import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
@@ -55,6 +57,14 @@ public class BillingService {
         BillingResult response = billingClient.isFeatureSupported(feature);
         ReactiveBillingLogger.log("Is billing supported - response: %d", response);
         return new Response(response.getResponseCode());
+    }
+
+    public void acknowledgePurchase(String purchaseToken, AcknowledgePurchaseResponseListener listener) throws RemoteException {
+        ReactiveBillingLogger.log("Acknowledge purchase - request (thread %s)", Thread.currentThread().getName());
+        billingClient.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken).build(), (billingResult) -> {
+            ReactiveBillingLogger.log("Acknowledge purchase - response: %d", billingResult.getResponseCode());
+            listener.onAcknowledgePurchaseResponse(billingResult);
+        });
     }
 
     public void consumePurchase(String purchaseToken, ConsumeResponseListener listener) throws RemoteException {

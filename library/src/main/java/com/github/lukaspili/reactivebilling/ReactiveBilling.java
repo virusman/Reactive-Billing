@@ -19,6 +19,7 @@ import android.content.Context;
 import android.os.Bundle;
 
 import com.github.lukaspili.reactivebilling.model.PurchaseType;
+import com.github.lukaspili.reactivebilling.observable.AcknowledgePurchaseObservable;
 import com.github.lukaspili.reactivebilling.observable.BillingServiceObservable;
 import com.github.lukaspili.reactivebilling.observable.ConsumePurchaseObservable;
 import com.github.lukaspili.reactivebilling.observable.LaunchPurchaseFlowObservable;
@@ -76,6 +77,10 @@ public class ReactiveBilling {
 
     public Observable<Response> isBillingSupported(PurchaseType purchaseType) {
         return IsBillingSupportedObservable.create(context, purchaseType);
+    }
+
+    public Observable<Response> acknowledgePurchase(String purchaseToken) {
+        return AcknowledgePurchaseObservable.create(context, purchaseToken);
     }
 
     public Observable<Response> consumePurchase(String purchaseToken) {
