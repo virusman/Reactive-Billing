@@ -9,16 +9,18 @@ public class Purchase {
     private final String packageName;
     private final String productId;
     private final String developerPayload;
+    private final String obfuscatedAccountId;
     private final String purchaseToken;
     private final PurchaseState purchaseState;
     private final long purchaseTime;
     private final boolean autoRenewing;
 
-    public Purchase(String orderId, String packageName, String productId, String developerPayload, String purchaseToken, PurchaseState purchaseState, long purchaseTime, boolean autoRenewing) {
+    public Purchase(String orderId, String packageName, String productId, String developerPayload, String obfuscatedAccountId, String purchaseToken, PurchaseState purchaseState, long purchaseTime, boolean autoRenewing) {
         this.orderId = orderId;
         this.packageName = packageName;
         this.productId = productId;
         this.developerPayload = developerPayload;
+        this.obfuscatedAccountId = obfuscatedAccountId;
         this.purchaseToken = purchaseToken;
         this.purchaseState = purchaseState;
         this.purchaseTime = purchaseTime;
@@ -38,7 +40,10 @@ public class Purchase {
     }
 
     public String getDeveloperPayload() {
-        return developerPayload;
+        if (developerPayload != null && !developerPayload.isEmpty())
+            return developerPayload;
+        else
+            return obfuscatedAccountId;
     }
 
     public String getPurchaseToken() {
@@ -58,16 +63,21 @@ public class Purchase {
     }
 
     public static Purchase fromBillingPurchase(com.android.billingclient.api.Purchase purchase) {
-            return new Purchase(
+        String obfuscatedAccountId = null;
+        if (purchase.getAccountIdentifiers() != null) {
+            obfuscatedAccountId = purchase.getAccountIdentifiers().getObfuscatedAccountId();
+        }
+
+        return new Purchase(
                 purchase.getOrderId(),
                 purchase.getPackageName(),
                 purchase.getProducts().get(0),
                 purchase.getDeveloperPayload(),
+                obfuscatedAccountId,
                 purchase.getPurchaseToken(),
                 PurchaseState.fromBillingPurchaseState(purchase.getPurchaseState()),
                 purchase.getPurchaseTime(),
                 purchase.isAutoRenewing()
-
         );
     }
 }

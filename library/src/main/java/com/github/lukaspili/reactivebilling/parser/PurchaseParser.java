@@ -28,6 +28,7 @@ public class PurchaseParser {
                 json.optString("packageName"),
                 json.optString("productId"),
                 json.optString("developerPayload"),
+                json.optString("obfuscatedAccountId"),
                 json.optString("purchaseToken"),
                 PurchaseState.fromBillingPurchaseState(json.optInt("purchaseState")),
                 json.optLong("purchaseTime"),
