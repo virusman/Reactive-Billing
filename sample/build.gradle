@@ -1,17 +1,4 @@
-buildscript {
-    repositories {
-        maven { url 'https://maven.fabric.io/public' }
-    }
-
-    dependencies {
-        // The Fabric Gradle plugin uses an open ended version to react
-        // quickly to Android tooling updates
-        classpath 'io.fabric.tools:gradle:1.+'
-    }
-}
-
 apply plugin: 'com.android.application'
-apply plugin: 'io.fabric'
 
 android {
     compileSdkVersion 23
@@ -49,16 +36,12 @@ repositories {
 }
 
 dependencies {
-    compile project(':library')
+    implementation project(':library')
 
-    compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.android.support:recyclerview-v7:23.3.0'
-    compile 'com.android.support:design:23.3.0'
+    implementation 'com.android.support:appcompat-v7:23.3.0'
+    implementation 'com.android.support:recyclerview-v7:23.3.0'
+    implementation 'com.android.support:design:23.3.0'
 
-    compile 'io.reactivex:rxjava:1.1.5'
-    compile 'io.reactivex:rxandroid:1.2.0'
-
-    compile('com.crashlytics.sdk.android:crashlytics:2.5.5@aar') {
-        transitive = true;
-    }
+    implementation 'io.reactivex:rxjava:1.1.5'
+    implementation 'io.reactivex:rxandroid:1.2.0'
 }
