@@ -1,13 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.github.lukaspili.reactivebilling.sample"
         minSdkVersion 16
-        targetSdkVersion 23
+        targetSdkVersion 33
         versionCode 3
         versionName "1.1"
     }
