@@ -1,8 +1,9 @@
 package com.github.lukaspili.reactivebilling.sample.inventory;
 
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.lukaspili.reactivebilling.model.Purchase;
 

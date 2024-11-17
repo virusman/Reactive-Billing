@@ -1,10 +1,11 @@
 package com.github.lukaspili.reactivebilling.sample;
 
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
 import android.util.SparseArray;
 import android.view.ViewGroup;
+
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentStatePagerAdapter;
 
 import com.github.lukaspili.reactivebilling.sample.inventory.InventoryFragment;
 import com.github.lukaspili.reactivebilling.sample.shop.ShopFragment;
